@@ -38,6 +38,15 @@ app = FastAPI(
     description=DESCRIPTION,
     openapi_tags=tags_metadata,
 )
+from fastapi.middleware.cors import CORSMiddleware
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 class HumanizeRequest(BaseModel):
