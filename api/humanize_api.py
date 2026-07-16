@@ -54,7 +54,6 @@ ACADEMIC_TRANSITIONS = [
 
 # --- دالة جلب المترادفات الذكية سياقياً ---
 def get_semantic_synonym(word, pos_tag):
-    # تحويل تاغات spaCy إلى تاغات WordNet
     wn_tag = None
     if pos_tag.startswith("NN"): wn_tag = wordnet.NOUN
     elif pos_tag.startswith("VB"): wn_tag = wordnet.VERB
@@ -68,7 +67,6 @@ def get_semantic_synonym(word, pos_tag):
     for syn in wordnet.synsets(word, pos=wn_tag):
         for lemma in syn.lemmas():
             name = lemma.name().replace("_", " ")
-            # الحفاظ على الحالة (كابيتال أو سمول)
             if word.istitle(): name = name.title()
             if name.lower() != word.lower() and name not in synonyms:
                 synonyms.append(name)
@@ -77,48 +75,37 @@ def get_semantic_synonym(word, pos_tag):
 
 # --- الدالة الجوهرية للأنسنة ---
 def advanced_humanizer(text, p_syn, p_trans):
-    # 1. حماية الاقتباسات الأكاديمية المكتوبة بصيغة (Smith et al., 2020) أو [1] باستخدام الـ Regex
     citation_pattern = r'(\([A-Za-z\s\.\,]+,\s+\d{4}\)|\[\d+\])'
     citations = re.findall(citation_pattern, text)
     
-    # استبدال مؤقت للاقتباسات لكي لا تلمسها الأدوات اللغوية
     for i, citation in enumerate(citations):
         text = text.replace(citation, f" __CITATION_{i}__ ")
 
     doc = nlp(text)
     processed_words = []
     
-    # استخراج الأسماء العلمية والأماكن (NER) لحمايتها (مثل Shakespeare و Hamlet)
     protected_entities = [ent.text.lower() for ent in doc.ents if ent.label_ in ["PERSON", "ORG", "GPE", "WORK_OF_ART"]]
 
-    # 2. معالجة المفردات بالاعتماد على التحليل النحوي السياقي
     for token in doc:
-        # إذا كانت الكلمة تابعة لاقتباس أو اسم علم محمي أو رمز، اتركها كما هي
         if "__CITATION_" in token.text or token.text.lower() in protected_entities or token.is_punct or token.is_digit:
             processed_words.append(token.text)
             continue
             
-        # تطبيق نسبة استبدال المفردات
         if random.random() < p_syn:
             synonym = get_semantic_synonym(token.text, token.tag_)
             processed_words.append(synonym)
         else:
             processed_words.append(token.text)
 
-    # إعادة تجميع النص
     reconstructed_text = " ".join(processed_words)
-    # تنظيف المسافات حول الفواصل والنقاط التي تخلفها المعالجة
     reconstructed_text = re.sub(r'\s+([.,!?;:])', r'\1', reconstructed_text)
 
-    # 3. تقسيم النص إلى جمل لإضافة الروابط الأكاديمية بذكاء
     sentences = [s.text.strip() for s in nlp(reconstructed_text).sents]
     humanized_sentences = []
     last_transition = None
 
     for i, sentence in enumerate(sentences):
-        # إضافة رابط انتقالي في بداية الجملة بناءً على النسبة المقترحة (بشرط ألا تكون الجملة الأولى)
         if i > 0 and random.random() < p_trans:
-            # اختيار رابط مغاير للرابط السابق تماماً لضمان عدم التكرار الركيك
             available_transitions = [t for t in ACADEMIC_TRANSITIONS if t != last_transition]
             chosen_transition = random.choice(available_transitions)
             sentence = f"{chosen_transition}, {sentence[0].lower()}{sentence[1:]}"
@@ -128,11 +115,9 @@ def advanced_humanizer(text, p_syn, p_trans):
 
     final_text = " ".join(humanized_sentences)
 
-    # 4. إعادة الاقتباسات الأصلية إلى أماكنها بدقة
     for i, citation in enumerate(citations):
         final_text = final_text.replace(f"__CITATION_{i}__", citation)
         
-    # تنظيف أي مسافات زائدة حول الاقتباسات
     final_text = re.sub(r'\s+__CITATION_\d+__\s+', ' ', final_text)
     for i, citation in enumerate(citations):
         final_text = final_text.replace(f"__CITATION_{i}__", citation)
@@ -144,7 +129,6 @@ async def humanize_endpoint(request: HumanizeRequest):
     orig_words = len(request.text.split())
     orig_sentences = len(nltk.sent_tokenize(request.text))
     
-    # تشغيل المحرك المطور
     result_text = advanced_humanizer(request.text, request.p_syn, request.p_trans)
     
     new_words = len(result_text.split())
