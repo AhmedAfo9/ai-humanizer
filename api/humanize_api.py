@@ -23,9 +23,9 @@ try:
 except Exception as e:
     print(f"Error downloading NLTK data: {e}")
 
-app = FastAPI(title="Advanced Academic AI Text Humanizer API", version="2.5")
+app = FastAPI(title="Advanced Academic AI Text Humanizer API", version="2.8")
 
-# --- إعدادات الـ CORS المفتوحة والمستقرة لجميع المنصات ---
+# --- إعدادات الـ CORS المستقرة والمفتوحة ---
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -34,21 +34,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# --- هيكل البيانات المستقبلة المطور لدعم مفتاح الـ Passive Voice ---
 class HumanizeRequest(BaseModel):
     text: str
     p_syn: Optional[float] = 0.2
     p_trans: Optional[float] = 0.2
     preserve_linebreaks: Optional[bool] = True
-    use_passive: Optional[bool] = False  # المتغير الجديد للتحكم بالميزة الهيكلية
+    use_passive: Optional[bool] = False
 
-# --- قائمة الروابط الأكاديمية (تستخدم في النمط التقليدي) ---
 ACADEMIC_TRANSITIONS = [
     "Furthermore", "Moreover", "In addition", "Consequently", 
     "Therefore", "On the other hand", "Notably", "In this context"
 ]
 
-# --- دالة جلب المترادفات (تستخدم في النمط التقليدي) ---
 def get_semantic_synonym(word, pos_tag):
     wn_tag = None
     if pos_tag.startswith("NN"): wn_tag = wordnet.NOUN
@@ -73,13 +70,29 @@ def get_semantic_synonym(word, pos_tag):
     return random.choice(synonyms) if synonyms else word
 
 
-# --- 🧠 خوارزمية التحويل الهيكلي والأنسنة النحوية الفائقة (Syntactic Reshaper) ---
+# --- 🧠 خوارزمية التحويل الهيكلي والأنسنة النحوية الفائقة المحدثة ---
 def advanced_structural_reshaper(sent_text):
+    doc = nlp(sent_text)
     text = sent_text.strip()
     
-    # 1. كسر نمط الـ AI في الجمل الشرطية والسببية عبر قلب العبارات (Clause Inversion)
-    # يحول: "The results are valid because the sample size was huge."
-    # إلى: "Because the sample size was huge, the results are valid."
+    # 1. 🔄 نقل الظروف (Adverb Shifting) - آمن للغاية وممتاز لكسر الـ N-grams
+    # مثال: "The system analyzed the data thoroughly." -> "Thoroughly, the system analyzed the data."
+    adverbs = [tok for tok in doc if tok.pos_ == "ADV" and tok.text.lower().endswith("ly")]
+    if adverbs:
+        adv = adverbs[0]
+        if adv.text.lower() not in ["only", "really", "very", "simply", "just"]:
+            adv_text = adv.text
+            # إزالة الظرف القديم وإعادة بناء الجملة بذكاء
+            cleaned_text = re.sub(rf'\b{adv_text}\b', '', text).strip()
+            cleaned_text = re.sub(r'\s+', ' ', cleaned_text)
+            cleaned_text = re.sub(r'\s+([.,!?;:])', r'\1', cleaned_text)
+            
+            # ضبط حالة الأحرف الاستهلالية للجملة الجديدة
+            if cleaned_text[0].isupper() and not cleaned_text.split()[0].lower() in ['i']:
+                cleaned_text = cleaned_text[0].lower() + cleaned_text[1:]
+            return f"{adv_text.capitalize()}, {cleaned_text}"
+
+    # 2. 🔄 قلب الجمل الشرطية والسببية (Clause Inversion)
     clause_match = re.search(r'(\s+)(because|although|since|while|if|when|though)\s+([^.,!?;]+)', text, re.IGNORECASE)
     if clause_match:
         conj = clause_match.group(2)
@@ -89,29 +102,62 @@ def advanced_structural_reshaper(sent_text):
             main_clause = parts[0].strip()
             sub_clause = conj + " " + clause_content.strip() + parts[1].strip()
             
-            # ضبط حالة الأحرف الكبيرة والصغيرة (Capitalization) بذكاء بشرى
             sub_clause = sub_clause[0].upper() + sub_clause[1:]
             if main_clause[0].isupper() and not main_clause.split()[0].lower() in ['i', 'the', 'this', 'it', 'a', 'an']:
                 main_clause = main_clause[0].lower() + main_clause[1:]
                 
             return f"{sub_clause}, {main_clause.rstrip('.')}"
 
-    # 2. تحويل العبارات الاستهلالية المكشوفة للـ AI إلى صيغ أكاديمية مبنية للمجهول (Passive Framing)
-    text = re.sub(r'^This study demonstrates that\s+(.+)', r'It is demonstrated by this study that \1', text, flags=re.IGNORECASE)
-    text = re.sub(r'^The author argues that\s+(.+)', r'It is argued by the author that \1', text, flags=re.IGNORECASE)
-    text = re.sub(r'^The results show that\s+(.+)', r'It is shown by the results that \1', text, flags=re.IGNORECASE)
-    text = re.sub(r'^Researchers found that\s+(.+)', r'It was found by researchers that \1', text, flags=re.IGNORECASE)
-    
-    # 3. صياغة قلب الأدوار لـ الأفعال النمطية الشائعة جداً في نصوص الذكاء الاصطناعي
+    # 3. 🔄 المبني للمجهول الأكاديمي الشائع جداً
+    academic_patterns = {
+        r'^This study demonstrates that\s+(.+)' : r'It is demonstrated by this study that \1',
+        r'^The researchers found that\s+(.+)' : r'It was found by the researchers that \1',
+        r'^The paper analyzes how\s+(.+)' : r'How \1 is analyzed by this paper',
+        r'^This suggests that\s+(.+)' : r'It is suggested by this that \1',
+        r'^The results show that\s+(.+)' : r'It is shown by the results that \1'
+    }
+    for pattern, repl in academic_patterns.items():
+        if re.match(pattern, text, re.IGNORECASE):
+            return re.sub(pattern, repl, text, flags=re.IGNORECASE)
+
     if "plays a crucial role in" in text.lower():
-        text = re.sub(r'(.+?)\s+plays a crucial role in\s+(.+)', r'A crucial role is played by \1 in \2', text, flags=re.IGNORECASE)
-    elif "plays an important role in" in text.lower():
-        text = re.sub(r'(.+?)\s+plays an important role in\s+(.+)', r'An important role is played by \1 in \2', text, flags=re.IGNORECASE)
+        return re.sub(r'(.+?)\s+plays a crucial role in\s+(.+)', r'A crucial role is played by \1 in \2', text, flags=re.IGNORECASE)
+
+    # 4. 🛡️ شبكة الأمان الميكروسكوبية (Fallback Safety Net)
+    # إذا لم يطبق أي تعديل هيكلي، نستبدل كلمة "فاضحة للـ AI" واحدة فقط لكسر مطابقة النص وحمايته!
+    ai_watermarks = {
+        "moreover": "furthermore",
+        "furthermore": "in addition",
+        "delve": "explore",
+        "testament": "proof",
+        "tapestry": "complexity",
+        "utilize": "use",
+        "crucial": "essential",
+        "essential": "important",
+        "significant": "notable",
+        "notable": "remarkable",
+        "consequently": "therefore",
+        "therefore": "thus",
+        "thus": "hence"
+    }
+    words = text.split()
+    changed = False
+    for idx, w in enumerate(words):
+        clean_w = w.lower().strip(".,!?;:")
+        if clean_w in ai_watermarks:
+            repl = ai_watermarks[clean_w]
+            if w.istitle():
+                repl = repl.title()
+            words[idx] = w.replace(clean_w, repl)
+            changed = True
+            break # نكتفي بكلمة واحدة ليبقى النص الأصلي 99% كما هو!
+            
+    if changed:
+        return " ".join(words)
 
     return text
 
 
-# --- دالة الأنسنة التقليدية بالمفردات والروابط ---
 def advanced_humanizer(text, p_syn, p_trans):
     citation_pattern = r'(\([A-Za-z\s\.\,]+,\s+\d{4}\)|\[\d+\])'
     citations = re.findall(citation_pattern, text)
@@ -167,19 +213,16 @@ async def humanize_endpoint(request: HumanizeRequest):
     orig_words = len(request.text.split())
     orig_sentences = len(list(doc_orig.sents))
     
-    # --- المسار الحرج: التحقق مما إذا كان تم تفعيل الـ Passive Voice الهيكلي ---
     if request.use_passive:
         sentences = [s.text.strip() for s in doc_orig.sents]
         reshaped_sentences = []
         
-        for index, sent in enumerate(sentences):
-            # تمرير الجمل عبر خوارزمية إعادة الهيكلة النحوية
+        for sent in sentences:
             reshaped_text = advanced_structural_reshaper(sent)
             reshaped_sentences.append(reshaped_text)
             
         result_text = " ".join(reshaped_sentences)
     else:
-        # النمط التقليدي (تعديل المفردات والروابط بناءً على أشرطة السحب)
         result_text = advanced_humanizer(request.text, request.p_syn, request.p_trans)
     
     doc_new = nlp(result_text)
@@ -198,4 +241,4 @@ async def humanize_endpoint(request: HumanizeRequest):
 
 @app.get("/health")
 def health_check():
-    return {"status": "healthy", "engine": "spaCy Structural Syntactic Reshaper v2.5"}
+    return {"status": "healthy", "engine": "spaCy Structural Reshaper v2.8"}
