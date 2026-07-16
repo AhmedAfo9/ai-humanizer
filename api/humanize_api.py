@@ -17,24 +17,21 @@ except OSError:
     download("en_core_web_sm")
     nlp = spacy.load("en_core_web_sm")
 
+# تحميل قاعدة بيانات المترادفات فقط وبشكل هادئ ومباشر
 try:
-    nltk.data.find('corpora/wordnet')
-except LookupError:
-    nltk.download('wordnet')
-    nltk.download('punkt')
-    nltk.download('averaged_perceptron_tagger')
+    nltk.download('wordnet', quiet=True)
+    nltk.download('omw-1.4', quiet=True)
+except Exception as e:
+    print(f"Error downloading NLTK data: {e}")
 
 app = FastAPI(title="Advanced Academic AI Text Humanizer API", version="2.0")
 
-# --- إعدادات الـ CORS الاحترافية والآمنة لموقعك ---
+# --- إعدادات الـ CORS الأكثر موثوقية والأسهل للنشر مستقبلاً ---
+# نستخدم "*" وابطال الـ Credentials لضمان عدم حظر المتصفحات للطلبات مطلقاً ولتسهيل تغيير الدومينات
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://myaitool.pages.dev",  # رابط موقعك الأساسي على كلاودفلير
-        "http://localhost:3000",       # للتطوير المحلي مستقبلاً
-        "http://localhost:8000"
-    ],
-    allow_credentials=True,            # تفعيل استقبال الـ Credentials لمنع حظر المتصفح
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -64,12 +61,15 @@ def get_semantic_synonym(word, pos_tag):
         return word
 
     synonyms = []
-    for syn in wordnet.synsets(word, pos=wn_tag):
-        for lemma in syn.lemmas():
-            name = lemma.name().replace("_", " ")
-            if word.istitle(): name = name.title()
-            if name.lower() != word.lower() and name not in synonyms:
-                synonyms.append(name)
+    try:
+        for syn in wordnet.synsets(word, pos=wn_tag):
+            for lemma in syn.lemmas():
+                name = lemma.name().replace("_", " ")
+                if word.istitle(): name = name.title()
+                if name.lower() != word.lower() and name not in synonyms:
+                    synonyms.append(name)
+    except Exception:
+        return word
                 
     return random.choice(synonyms) if synonyms else word
 
@@ -100,6 +100,7 @@ def advanced_humanizer(text, p_syn, p_trans):
     reconstructed_text = " ".join(processed_words)
     reconstructed_text = re.sub(r'\s+([.,!?;:])', r'\1', reconstructed_text)
 
+    # تقسيم الجمل بالاعتماد على ذكاء spaCy بدلاً من NLTK المنهار
     sentences = [s.text.strip() for s in nlp(reconstructed_text).sents]
     humanized_sentences = []
     last_transition = None
@@ -126,13 +127,16 @@ def advanced_humanizer(text, p_syn, p_trans):
 
 @app.post("/humanize")
 async def humanize_endpoint(request: HumanizeRequest):
+    # استخدام تحليل spaCy لحساب الإحصائيات بدقة وتفادي أخطاء حزم NLTK
+    doc_orig = nlp(request.text)
     orig_words = len(request.text.split())
-    orig_sentences = len(nltk.sent_tokenize(request.text))
+    orig_sentences = len(list(doc_orig.sents))
     
     result_text = advanced_humanizer(request.text, request.p_syn, request.p_trans)
     
+    doc_new = nlp(result_text)
     new_words = len(result_text.split())
-    new_sentences = len(nltk.sent_tokenize(result_text))
+    new_sentences = len(list(doc_new.sents))
     
     return {
         "humanized_text": result_text,
