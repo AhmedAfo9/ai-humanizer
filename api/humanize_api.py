@@ -1,162 +1,162 @@
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel, Field
-from typing import Optional
+import os
 import re
-
-# Import processing helpers from the existing Streamlit page
-from pages.humanize_text import (
-    extract_citations,
-    restore_citations,
-    minimal_rewriting,
-    preserve_linebreaks_rewrite,
-    count_words,
-    count_sentences,
-)
-
-
-DESCRIPTION = (
-    """
-AI Text Humanizer API
-
-This API provides server-side access to the project's text humanization pipeline. It accepts
-AI-generated text and returns an enhanced, more natural, human-like version while preserving
-academic citations and structure. The endpoint exposes options to control synonym replacement
-intensity and the frequency of added academic transitions.
-"""
-)
-
-tags_metadata = [
-    {
-        "name": "humanize",
-        "description": "Endpoints for transforming AI-generated text into human-like prose.",
-    }
-]
-
-app = FastAPI(
-    title="AI Text Humanizer API",
-    version="0.2",
-    description=DESCRIPTION,
-    openapi_tags=tags_metadata,
-)
+import random
+import nltk
+import spacy
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from typing import Optional
+from nltk.corpus import wordnet
 
+# --- تحميل الحزم اللغوية تلقائياً عند إقلاع السيرفر ---
+try:
+    nlp = spacy.load("en_core_web_sm")
+    # تفعيل مكتبة النفي والإضافات
+except OSError:
+    from spacy.cli import download
+    download("en_core_web_sm")
+    nlp = spacy.load("en_core_web_sm")
+
+try:
+    nltk.data.find('corpora/wordnet')
+except LookupError:
+    nltk.download('wordnet')
+    nltk.download('punkt')
+    nltk.download('averaged_perceptron_tagger')
+
+app = FastAPI(title="Advanced Academic AI Text Humanizer API", version="2.0")
+
+# --- إعدادات الـ CORS الاحترافية والآمنة لتتصل بـ Cloudflare ---
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=False,
+    allow_credentials=False,  # تم إيقافها لمنع تعارض النشر على Render
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-
+# --- هيكل البيانات المستقبلة ---
 class HumanizeRequest(BaseModel):
-    text: str = Field(..., description="The input text to humanize. Must be non-empty.")
-    p_syn: Optional[float] = Field(0.2, ge=0.0, le=1.0, description="Synonym replacement intensity (0.0-1.0)")
-    p_trans: Optional[float] = Field(0.2, ge=0.0, le=1.0, description="Academic transition insertion probability (0.0-1.0)")
-    preserve_linebreaks: Optional[bool] = Field(True, description="Whether to preserve original line breaks")
+    text: str
+    p_syn: Optional[float] = 0.2
+    p_trans: Optional[float] = 0.2
+    preserve_linebreaks: Optional[bool] = True
 
-    class Config:
-        schema_extra = {
-            "example": {
-                "text": "Recent studies (Smith et al., 2020) show promising results. It can't be ignored.",
-                "p_syn": 0.3,
-                "p_trans": 0.2,
-                "preserve_linebreaks": True,
-            }
-        }
+# --- قائمة الروابط الأكاديمية الذكية (منعاً للتكرار) ---
+ACADEMIC_TRANSITIONS = [
+    "Furthermore", "Moreover", "In addition", "Consequently", 
+    "Therefore", "On the other hand", "Notably", "In this context"
+]
 
+# --- دالة جلب المترادفات الذكية سياقياً ---
+def get_semantic_synonym(word, pos_tag):
+    # تحويل تاغات spaCy إلى تاغات WordNet
+    wn_tag = None
+    if pos_tag.startswith("NN"): wn_tag = wordnet.NOUN
+    elif pos_tag.startswith("VB"): wn_tag = wordnet.VERB
+    elif pos_tag.startswith("JJ"): wn_tag = wordnet.ADJ
+    elif pos_tag.startswith("RB"): wn_tag = wordnet.ADV
+    
+    if not wn_tag:
+        return word
 
-class HumanizeResponse(BaseModel):
-    humanized_text: str = Field(..., description="The transformed human-like text result")
-    orig_word_count: int
-    orig_sentence_count: int
-    new_word_count: int
-    new_sentence_count: int
-    words_added: int
-    sentences_added: int
+    synonyms = []
+    for syn in wordnet.synsets(word, pos=wn_tag):
+        for lemma in syn.lemmas():
+            name = lemma.name().replace("_", " ")
+            # الحفاظ على الحالة (كابيتال أو سمول)
+            if word.istitle(): name = name.title()
+            if name.lower() != word.lower() and name not in synonyms:
+                synonyms.append(name)
+                
+    return random.choice(synonyms) if synonyms else word
 
-    class Config:
-        schema_extra = {
-            "example": {
-                "humanized_text": "Moreover, Recent studies (Smith et al., 2020) show promising results. It cannot be ignored.",
-                "orig_word_count": 11,
-                "orig_sentence_count": 2,
-                "new_word_count": 13,
-                "new_sentence_count": 3,
-                "words_added": 2,
-                "sentences_added": 1,
-            }
-        }
+# --- الدالة الجوهرية للأنسنة ---
+def advanced_humanizer(text, p_syn, p_trans):
+    # 1. حماية الاقتباسات الأكاديمية المكتوبة بصيغة (Smith et al., 2020) أو [1] باستخدام الـ Regex
+    citation_pattern = r'(\([A-Za-z\s\.\,]+,\s+\d{4}\)|\[\d+\])'
+    citations = re.findall(citation_pattern, text)
+    
+    # استبدال مؤقت للاقتباسات لكي لا تلمسها الأدوات اللغوية
+    for i, citation in enumerate(citations):
+        text = text.replace(citation, f" __CITATION_{i}__ ")
 
+    doc = nlp(text)
+    processed_words = []
+    
+    # استخراج الأسماء العلمية والأماكن (NER) لحمايتها (مثل Shakespeare و Hamlet)
+    protected_entities = [ent.text.lower() for ent in doc.ents if ent.label_ in ["PERSON", "ORG", "GPE", "WORK_OF_ART"]]
 
-@app.get("/health", tags=["humanize"], summary="Health check")
-def health():
-    """Returns OK when the service is healthy.
+    # 2. معالجة المفردات بالاعتماد على التحليل النحوي السياقي
+    for token in doc:
+        # إذا كانت الكلمة تابعة لاقتباس أو اسم علم محمي أو رمز، اتركها كما هي
+        if "__CITATION_" in token.text or token.text.lower() in protected_entities or token.is_punct or token.is_digit:
+            processed_words.append(token.text)
+            continue
+            
+        # تطبيق نسبة استبدال المفردات
+        if random.random() < p_syn:
+            synonym = get_semantic_synonym(token.text, token.tag_)
+            processed_words.append(synonym)
+        else:
+            processed_words.append(token.text)
 
-    Useful for simple uptime checks.
-    """
-    return {"status": "ok"}
+    # إعادة تجميع النص
+    reconstructed_text = " ".join(processed_words)
+    # تنظيف المسافات حول الفواصل والنقاط التي تخلفها المعالجة
+    reconstructed_text = re.sub(r'\s+([.,!?;:])', r'\1', reconstructed_text)
 
+    # 3. تقسيم النص إلى جمل لإضافة الروابط الأكاديمية بذكاء
+    sentences = [s.text.strip() for s in nlp(reconstructed_text).sents]
+    humanized_sentences = []
+    last_transition = None
 
-@app.post(
-    "/humanize",
-    response_model=HumanizeResponse,
-    tags=["humanize"],
-    summary="Humanize input text",
-    response_description="The transformed text and basic metrics",
-)
-def humanize(req: HumanizeRequest):
-    """Transform AI-generated text into human-like prose.
+    for i, sentence in enumerate(sentences):
+        # إضافة رابط انتقالي في بداية الجملة بناءً على النسبة المقترحة (بشرط ألا تكون الجملة الأولى)
+        if i > 0 and random.random() < p_trans:
+            # اختيار رابط مغاير للرابط السابق تماماً لضمان عدم التكرار الركيك
+            available_transitions = [t for t in ACADEMIC_TRANSITIONS if t != last_transition]
+            chosen_transition = random.choice(available_transitions)
+            sentence = f"{chosen_transition}, {sentence[0].lower()}{sentence[1:]}"
+            last_transition = chosen_transition
+            
+        humanized_sentences.append(sentence)
 
-    The endpoint will:
-    - Preserve and protect citation strings (e.g., APA style) while rewriting
-    - Optionally preserve original line breaks
-    - Expand contractions, replace synonyms, and optionally add academic transitions
+    final_text = " ".join(humanized_sentences)
 
-    Provide `p_syn` and `p_trans` to tune intensity of synonym replacement and
-    transition insertion respectively (values between 0.0 and 1.0).
-    """
-    text = req.text or ""
-    if not text.strip():
-        raise HTTPException(status_code=400, detail="`text` must be a non-empty string")
+    # 4. إعادة الاقتباسات الأصلية إلى أماكنها بدقة
+    for i, citation in enumerate(citations):
+        final_text = final_text.replace(f"__CITATION_{i}__", citation)
+        
+    # تنظيف أي مسافات زائدة حول الاقتباسات
+    final_text = re.sub(r'\s+__CITATION_\d+__\s+', ' ', final_text)
+    for i, citation in enumerate(citations):
+        final_text = final_text.replace(f"__CITATION_{i}__", citation)
 
-    # Original stats
-    orig_wc = count_words(text)
-    orig_sc = count_sentences(text)
+    return final_text.strip()
 
-    # Protect citations
-    no_refs_text, placeholders = extract_citations(text)
-
-    # Choose rewrite mode
-    if req.preserve_linebreaks:
-        rewritten = preserve_linebreaks_rewrite(no_refs_text, p_syn=req.p_syn, p_trans=req.p_trans)
-    else:
-        rewritten = minimal_rewriting(no_refs_text, p_syn=req.p_syn, p_trans=req.p_trans)
-
-    # Restore citations and normalize spacing similar to Streamlit page
-    final_text = restore_citations(rewritten, placeholders)
-    final_text = re.sub(r"[ \t]+([.,;:!?])", r"\1", final_text)
-    final_text = re.sub(r"(\()[ \t]+", r"\1", final_text)
-    final_text = re.sub(r"[ \t]+(\))", r"\1", final_text)
-    final_text = re.sub(r"[ \t]{2,}", " ", final_text)
-    final_text = re.sub(r"``\s*(.+?)\s*''", r'"\1"', final_text)
-
-    new_wc = count_words(final_text)
-    new_sc = count_sentences(final_text)
-
+@app.post("/humanize")
+async def humanize_endpoint(request: HumanizeRequest):
+    orig_words = len(request.text.split())
+    orig_sentences = len(nltk.sent_tokenize(request.text))
+    
+    # تشغيل المحرك المطور
+    result_text = advanced_humanizer(request.text, request.p_syn, request.p_trans)
+    
+    new_words = len(result_text.split())
+    new_sentences = len(nltk.sent_tokenize(result_text))
+    
     return {
-        "humanized_text": final_text,
-        "orig_word_count": orig_wc,
-        "orig_sentence_count": orig_sc,
-        "new_word_count": new_wc,
-        "new_sentence_count": new_sc,
-        "words_added": new_wc - orig_wc,
-        "sentences_added": new_sc - orig_sc,
+        "humanized_text": result_text,
+        "orig_word_count": orig_words,
+        "orig_sentence_count": orig_sentences,
+        "new_word_count": new_words,
+        "new_sentence_count": new_sentences,
+        "words_added": max(0, new_words - orig_words),
+        "sentences_added": max(0, new_sentences - orig_sentences)
     }
 
-
-# if __name__ == "__main__":
-#     # Quick developer run: python api/humanize_api.py
-#     import uvicorn
-
-#     uvicorn.run("api.humanize_api:app", host="127.0.0.1", port=8000, reload=True)
+@app.get("/health")
+def health_check():
+    return {"status": "healthy", "engine": "spaCy + WordNet Expert"}
