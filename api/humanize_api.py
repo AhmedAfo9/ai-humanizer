@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional
 
-app = FastAPI(title="Elite Prose Editing Engine", version="8.0")
+app = FastAPI(title="C1 Academic Advanced Editing Engine", version="8.2")
 
 # --- إعدادات الـ CORS المستقرة لمنع مشاكل الاتصال ---
 app.add_middleware(
@@ -37,43 +37,43 @@ def call_openrouter_engine(text: str, p_syn: float, p_trans: float, use_passive:
     if not api_key:
         return "Error: OPENROUTER_API_KEY is not set."
 
-    # 1. صياغة ديناميكية طبيعية للمفردات بعيداً عن المصطلحات المحنطة
+    # 1. ضبط معايير اختيار الكلمات بناءً على مستوى C1 الطبيعي والنظيف
     if p_syn <= 0.3:
-        vocab_instruction = "Make minimal adjustments, only smoothing out stiff phrases while keeping the core vocabulary intact."
+        vocab_instruction = "Keep the vocabulary simple, clean, and close to the draft, only fixing awkward phrasing."
     elif p_syn <= 0.6:
-        vocab_instruction = "Moderate editing. Replace repetitive or textbook words with natural, vivid, and precise conversational alternatives."
+        vocab_instruction = "Use natural, common academic verbs. Replace complex textbook metaphors with direct, accurate vocabulary."
     else:
-        vocab_instruction = "Thoroughly rewrite the text. Use highly diverse, rich human expressions and crisp idioms to completely refresh the vocabulary."
+        vocab_instruction = "Fully rewrite using clear, diverse, and robust C1-level expressions, ensuring total clarity without puffery."
 
-    # 2. إدارة روابط الجمل بشكل طبيعي وسلس جداً
+    # 2. صياغة روابط منطقية غير متكلفة
     if p_trans <= 0.3:
-        transition_instruction = "Do not use formal transition words. Let sentences connect through pure logic and natural narrative progression."
+        transition_instruction = "Do not use robotic transition words. Connect ideas purely through punctuation and sentence order."
     elif p_trans <= 0.6:
-        transition_instruction = "Use light, organic conversational connectors (like so, yet, but, instead, because of this) only when necessary to bridge thoughts."
+        transition_instruction = "Incorporate simple, natural links (like so, yet, because of this, instead) only where logically required."
     else:
-        transition_instruction = "Ensure seamless prose flow using a rich variety of structural links, keeping it completely natural and non-repetitive."
+        transition_instruction = "Maintain dynamic logical flow using varied, clean structural connectors, completely avoiding mechanical repetition."
 
-    # 3. دمج المبني للمجهول بذكاء بشري متمكن
+    # 3. إدراج الصيغ الهيكلية للمبني للمجهول بذكاء الطالب المتمكن
     if use_passive:
-        passive_instruction = "Blend elegant passive voice constructions into the paragraphs to shift focus to the actions and objects, effectively breaking up repetitive sentence cadences."
+        passive_instruction = "Integrate precise passive voice constructions into appropriate clauses. This structural shift is necessary to break up predictable active-voice patterns."
     else:
-        passive_instruction = "Favor active, direct verbs, keeping passive phrasing only where it feels entirely organic to standard English."
+        passive_instruction = "Use standard active and passive structures in a balanced, unforced human proportion."
 
-    # 4. الـ System Prompt الشبح (لا يحتوي على أي إشارة للذكاء الاصطناعي أو الكواشف)
-    system_prompt = f"""You are a master copyeditor and a seasoned storyteller rewriting a rough draft for publication in a premium magazine. Your goal is to make the prose sound exceptionally vivid, natural, and engaging, capturing the authentic rhythm of native human speech.
+    # 4. الـ System Prompt الجديد كلياً: شخصية الباحث المتقدم C1 (صائد ومفتت البصمات الآلية)
+    system_prompt = f"""You are a brilliant non-native academic researcher writing at an advanced C1 English proficiency level. Your prose is structurally flawless, grammatically perfect, and highly coherent, but it is entirely free from pretentious, ornamental, or dramatic AI-jargon. You write with clinical clarity, using straightforward and objective language.
 
-Apply these tailored editing preferences based on the configuration:
-- Vocabulary Modulation: {vocab_instruction}
-- Structural Flow: {transition_instruction}
-- Voice Configuration: {passive_instruction}
+Apply these mechanical preferences based on the configuration:
+- Vocabulary Scale: {vocab_instruction}
+- Logical Linkage: {transition_instruction}
+- Grammatical Voice: {passive_instruction}
 
-CORE RULES FOR NATURAL HUMAN PROSE:
-1. Sentence Length Burstiness (Crucial): Heavily vary your sentence structures. Follow a long, descriptive sentence with a very short, sharp, punchy one (4-7 words). Uniform sentence length is completely prohibited.
-2. Dynamic Openings: Never start consecutive sentences with the same subject or pronoun. Mix your sentence openings (e.g., start with a dependent clause, a prepositional phrase, or a direct action).
-3. Absolute Clarity: Write with crisp, clear, and direct language. Avoid overly ornamental, pretentious, or robotic jargon that sounds like a machine trying too hard.
-4. Rigid Guardrails: NEVER change, alter, or add spaces to proper nouns, character names ('Hamlet', 'Shakespeare', 'Claudius'), geographic locations ('Denmark'), or citation placeholders like [[REF_1]]. 
-5. Maintain original paragraphs and line breaks perfectly.
-6. Output ONLY the raw, polished text. No introductions, no notes, and no markdown formatting wrappers."""
+STRICT DIRECTIVES TO DESTROY THE AI FOOTPRINT:
+1. THE PRECISE BLACKLIST: Do NOT use overly dramatic, narrative, or cliché words that machines rely on to sound smart. Absolutely forbid: unfurls, plunges us into, heart of, web of sorrow, chilling truth, cascade, demise, weds, ascends to the throne, specter, perpetrated, inner turmoil, deeply saddened, profound sorrow, plot progresses, revolutionary, tapestry, testament, delve, pivotal, renowned, paramount, furthermore, moreover, consequently, subsequently, underscores.
+2. The C1 Clarity Rule: Write plainly and directly. Instead of "unfurls in Denmark," write "takes place in Denmark." Instead of "caught in a web of sorrow," write "is deeply grieved by." Avoid flowery adjectives; real scholars focus on clear facts and data.
+3. Radical Sentence Length Burstiness: Ensure a highly unpredictable rhythm. Mix very long complex sentences (25-30 words) with very short, punchy, declarative sentences (4-6 words). Uniform or predictable sentence length is the primary trigger for AI detection detectors.
+4. Rigid Guardrails: NEVER touch, alter, or introduce spaces to proper nouns, character names ('Hamlet', 'Shakespeare'), geographic locations, or citation numbers/tags.
+5. Retain original line breaks and paragraphs perfectly.
+6. Output ONLY the clean rewritten text, with no markdown code blocks, no introductions, and no conversational notes."""
 
     url = "https://openrouter.ai/api/v1/chat/completions"
     headers = {
@@ -88,7 +88,7 @@ CORE RULES FOR NATURAL HUMAN PROSE:
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": text}
         ],
-        "temperature": 0.85,  # رفع الحرارة لكسر الأنماط الرياضية المتوقعة وتدمير بصمة الـ AI
+        "temperature": 0.85,  # مستوى مثالي لرفع الحيرة الإحصائية (Perplexity) دون خسارة المعنى
         "max_tokens": 4000
     }
 
@@ -115,7 +115,7 @@ async def humanize_endpoint(request: HumanizeRequest):
         use_passive=request.use_passive
     )
     
-    # تنظيف ميكانيكي للفراغات قبل الترقيم لضمان مظهر بشري ممتاز
+    # تنظيف الفراغات حول علامات الترقيم لضمان مظهر احترافي
     result_text = re.sub(r"\s+([.,;:!?])", r"\1", result_text)
     
     new_words = count_words(result_text)
@@ -133,4 +133,4 @@ async def humanize_endpoint(request: HumanizeRequest):
 
 @app.get("/health")
 def health_check():
-    return {"status": "healthy", "engine": "Stealth Editing Engine v8.0"}
+    return {"status": "healthy", "engine": "C1 Advanced Stealth Engine v8.2"}
