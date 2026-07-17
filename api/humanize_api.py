@@ -91,8 +91,8 @@ CRITICAL LINGUISTIC AND STRUCTURAL COMMANDS:
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": text}
         ],
-        "temperature": 0.65  # توازن مثالي لمنع الشطحات الدلالية غير المنضبطة
-        "max_tokens": 4000    # 👈 هذا هو السطر السحري الذي سيحل المشكلة فوراً!
+        "temperature": 0.65,  # توازن مثالي لمنع الشطحات الدلالية غير المنضبطة
+        "max_tokens": 4000    # هذا هو السطر السحري الذي سيحل المشكلة فوراً! 👈
     }
 
     try:
