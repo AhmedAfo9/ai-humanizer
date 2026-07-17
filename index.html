@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>مؤنسن النصوص الذكي | v7.7</title>
+    <title>مؤنسن النصوص الذكي | v7.8</title>
     <!-- تضمين حزم التصميم والأيقونات العالمية -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -24,7 +24,7 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&family=Tajawal:wght@400;500;700&display=swap');
         
-        /* 🛑 الإلغاء المطلق والنهائي لعلامة وسهم التحديث عند السحب لأسفل (Pull-to-Refresh Disabled) */
+        /* 🛑 الإلغاء المطلق والنهائي لعلامة وسهم التحديث عند السحب لأسفل */
         html, body { 
             overscroll-behavior-y: none !important; 
             overscroll-behavior: none !important;
@@ -34,9 +34,9 @@
         }
         
         body { 
-            overflow-y: auto !important; /* السماح بالتمرير العمودي الحر للوصول للنتائج */
+            overflow-y: auto !important;
             font-family: 'Tajawal', sans-serif; 
-            -webkit-overflow-scrolling: touch; /* تمرير انسيابي فائق النعومة للهواتف */
+            -webkit-overflow-scrolling: touch;
         }
         
         .font-english { font-family: 'Plus Jakarta Sans', sans-serif; }
@@ -45,7 +45,7 @@
             -webkit-backdrop-filter: blur(16px);
         }
         
-        * { transition: background-color 0.25s ease, border-color 0.25s ease, transform 0.15s ease; }
+        * { transition: background-color 0.25s ease, border-color 0.25s ease, transform 0.15s ease, opacity 0.2s ease; }
         
         input[type="range"]::-webkit-slider-thumb {
             -webkit-appearance: none;
@@ -56,6 +56,11 @@
             background: #6366f1;
             cursor: pointer;
             box-shadow: 0 0 8px rgba(99, 102, 241, 0.5);
+        }
+        input[type="range"]:disabled::-webkit-slider-thumb {
+            background: #94a3b8;
+            box-shadow: none;
+            cursor: not-allowed;
         }
     </style>
 </head>
@@ -76,7 +81,6 @@
             <p class="text-xs text-slate-400 mt-2 tracking-widest">ADVANCED ACADEMIC HUMANIZER</p>
         </div>
         
-        <!-- اسمك يضيء بلون ثلجي ساطع فائق الوضوح والتنسيق -->
         <div class="flex flex-col items-center gap-1.5 mb-6">
             <span class="text-[10px] text-slate-500 tracking-widest uppercase">Powered by NLP Tech</span>
             <div class="text-sm font-bold tracking-wider text-slate-100 font-mono drop-shadow-[0_0_12px_rgba(255,255,255,0.7)] animate-pulse">
@@ -88,7 +92,7 @@
     <!-- 📱 الحاوية الرئيسية المحكمة لشاشات الهواتف (Index Fitment) -->
     <main class="flex-1 w-full max-w-md mx-auto px-4 pt-4 pb-20">
         
-        <!-- 🌓 ترويسة الموقع الهيكلية المدمج بها زر الوضع الليلي لمنع أي تداخل بصري -->
+        <!-- 🌓 ترويسة الموقع الهيكلية المدمج بها زر الوضع الليلي -->
         <header class="flex items-center justify-between mb-6 mt-4 p-1">
             <div class="min-w-0">
                 <h1 class="text-xl font-bold tracking-tight text-slate-800 dark:text-white">مؤنسن النصوص الذكي</h1>
@@ -112,7 +116,7 @@
             <!-- لوحة تحكم الخيارات والمفاتيح المحمية هندسياً ضد الاقتطاع -->
             <section class="p-4 rounded-2xl glass-card bg-white/80 dark:bg-cardDark border border-slate-200 dark:border-slate-800/80 shadow-md">
                 
-                <!-- السويتش الهيكلي المقاوم للانضغاط تماماً -->
+                <!-- السويتش الهيكلي للتحويل الباسيف -->
                 <div class="flex items-center justify-between p-3 rounded-xl bg-slate-100/50 dark:bg-slate-900/40 border border-slate-200/60 dark:border-slate-800/80 gap-4 mb-4">
                     <div class="min-w-0 flex-1">
                         <h3 class="text-xs font-bold text-slate-700 dark:text-slate-200">التحويل الهيكلي (Passive Voice)</h3>
@@ -124,8 +128,8 @@
                     </label>
                 </div>
 
-                <!-- شريط قوة التغيير اللفظي -->
-                <div class="mb-4 px-1">
+                <!-- شريط قوة التغيير اللفظي (معرف فريد للتحكم البرمجي بالقفل) -->
+                <div id="syn-control-group" class="mb-4 px-1">
                     <div class="flex justify-between items-center mb-1">
                         <span class="text-xs font-medium text-slate-500 dark:text-slate-400">قوة تغيير المفردات</span>
                         <span id="syn-badge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400">0.50</span>
@@ -134,7 +138,7 @@
                 </div>
 
                 <!-- شريط روابط التدفق والسلاسة اللغوية -->
-                <div class="px-1">
+                <div id="trans-control-group" class="px-1">
                     <div class="flex justify-between items-center mb-1">
                         <span class="text-xs font-medium text-slate-500 dark:text-slate-400">روابط التدفق والسلاسة</span>
                         <span id="trans-badge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400">0.50</span>
@@ -158,7 +162,7 @@
                 <span>ابدأ الأنسنة اللغوية الفائقة</span>
             </button>
 
-            <!-- 📦 صندوق عرض المخرجات الصارم ومزود بزر "نص جديد" الذكي لإعادة التهيئة والتمرير تلقائياً -->
+            <!-- 📦 صندوق عرض المخرجات الصارم ومزود بزر "نص جديد" الذكي -->
             <section id="h-result-box" class="hidden p-4 rounded-2xl glass-card bg-white dark:bg-slate-900/60 border border-indigo-500/30 shadow-lg space-y-3">
                 <div class="flex justify-between items-center pb-2 border-b border-slate-100 dark:border-slate-800">
                     <span class="text-xs font-bold text-indigo-500"><i class="fa-solid fa-circle-check ml-1"></i>النص البشري الناتج</span>
@@ -181,7 +185,7 @@
     <script>
         const BACKEND_BASE_URL = "https://ai-humanizer-yd94.onrender.com";
 
-        // 1. التحكم الآمن بشاشة الإقلاع (Splash Screen) وإخفائها بانسيابية كلياً
+        // 1. التحكم الآمن بشاشة الإقلاع (Splash Screen)
         window.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => {
                 const splash = document.getElementById('splash-screen');
@@ -191,7 +195,7 @@
             }, 1600);
         });
 
-        // 2. محرك تبديل الوضع الليلي والنهاري المتناسق هيكلياً وبصرياً
+        // 2. محرك تبديل الوضع الليلي والنهاري المتناسق
         const themeToggle = document.getElementById('theme-toggle');
         themeToggle.addEventListener('click', () => {
             document.documentElement.classList.toggle('dark');
@@ -208,6 +212,9 @@
         const transBadge = document.getElementById('trans-badge');
         const hInputText = document.getElementById('h-input-text');
         const hWordCount = document.getElementById('h-word-count');
+        const passiveSwitch = document.getElementById('passive-switch');
+        const synGroup = document.getElementById('syn-control-group');
+        const transGroup = document.getElementById('trans-control-group');
 
         synSlider.addEventListener('input', (e) => synBadge.textContent = parseFloat(e.target.value).toFixed(2));
         transSlider.addEventListener('input', (e) => transBadge.textContent = parseFloat(e.target.value).toFixed(2));
@@ -217,11 +224,26 @@
             hWordCount.textContent = `${count} كلمة`;
         });
 
-        // 4. تنفيذ ومعالجة طلبات الأنسنة مع خادم الباكيند v7.0
+        // 🔒 4. وظيفة الهندسة الذكية لقفل السلايدرات بصرياً ومنطقياً عند تفعيل الـ Passive Voice
+        function handlePassiveToggle() {
+            const isPassive = passiveSwitch.checked;
+            synSlider.disabled = isPassive;
+            transSlider.disabled = isPassive;
+            
+            if (isPassive) {
+                synGroup.classList.add('opacity-40', 'pointer-events-none');
+                transGroup.classList.add('opacity-40', 'pointer-events-none');
+            } else {
+                synGroup.classList.remove('opacity-40', 'pointer-events-none');
+                transGroup.classList.remove('opacity-40', 'pointer-events-none');
+            }
+        }
+        passiveSwitch.addEventListener('change', handlePassiveToggle);
+
+        // 5. تنفيذ ومعالجة طلبات الأنسنة مع خادم الباكيند
         const btnHumanize = document.getElementById('btn-humanize-action');
         const hResultBox = document.getElementById('h-result-box');
         const hOutputText = document.getElementById('h-output-text');
-        const passiveSwitch = document.getElementById('passive-switch');
 
         btnHumanize.addEventListener('click', async () => {
             const text = hInputText.value.trim();
@@ -250,8 +272,6 @@
 
                 hOutputText.textContent = data.humanized_text;
                 hResultBox.classList.remove('hidden');
-                
-                // التمرير السلس نحو صندوق النتيجة بعد توليدها بنجاح
                 hResultBox.scrollIntoView({ behavior: 'smooth' });
 
             } catch (error) {
@@ -264,7 +284,7 @@
             }
         });
 
-        // زر النسخ السريع للمخرجات البلاغية
+        // زر النسخ السريع للمخرجات
         document.getElementById('btn-h-copy').addEventListener('click', () => {
             navigator.clipboard.writeText(hOutputText.textContent);
             const btn = document.getElementById('btn-h-copy');
@@ -272,7 +292,7 @@
             setTimeout(() => btn.innerHTML = `<i class="fa-solid fa-copy ml-1"></i>نسخ`, 2000);
         });
 
-        // 5. هندسة تصفير الصفحة والعودة للأعلى لمنع أي تجمد للمتصفح
+        // 6. هندسة تصفير الصفحة والعودة للأعلى
         document.getElementById('btn-h-clear').addEventListener('click', () => {
             hInputText.value = ""; 
             hWordCount.textContent = "0 كلمة"; 
