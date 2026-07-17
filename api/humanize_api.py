@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional
 
-app = FastAPI(title="Anti-AI Academic Humanizer Engine", version="7.9")
+app = FastAPI(title="Elite Prose Editing Engine", version="8.0")
 
 # --- إعدادات الـ CORS المستقرة لمنع مشاكل الاتصال ---
 app.add_middleware(
@@ -35,49 +35,45 @@ def count_sentences(text: str) -> int:
 def call_openrouter_engine(text: str, p_syn: float, p_trans: float, use_passive: bool) -> str:
     api_key = os.environ.get("OPENROUTER_API_KEY")
     if not api_key:
-        return "Error: OPENROUTER_API_KEY is not set in Render Environment Variables."
+        return "Error: OPENROUTER_API_KEY is not set."
 
-    # 1. إعادة هندسة شريط المفردات للتركيز على إعادة الصياغة البشرية المباشرة وليس الفخامة الزائفة
+    # 1. صياغة ديناميكية طبيعية للمفردات بعيداً عن المصطلحات المحنطة
     if p_syn <= 0.3:
-        vocab_instruction = "Keep the phrasing close to the original draft, only clarifying sentences that feel stiff or robotic."
+        vocab_instruction = "Make minimal adjustments, only smoothing out stiff phrases while keeping the core vocabulary intact."
     elif p_syn <= 0.6:
-        vocab_instruction = "Rephrase sentences using natural, clear, and direct alternative words. Use clean, clear academic verbs."
+        vocab_instruction = "Moderate editing. Replace repetitive or textbook words with natural, vivid, and precise conversational alternatives."
     else:
-        vocab_instruction = "Completely break down and rebuild the sentences using highly diverse, natural human phrasing. Write with dynamic and crisp idioms."
+        vocab_instruction = "Thoroughly rewrite the text. Use highly diverse, rich human expressions and crisp idioms to completely refresh the vocabulary."
 
-    # 2. إعادة هندسة شريط الروابط وحظر أدوات الربط الآلية المتكررة
+    # 2. إدارة روابط الجمل بشكل طبيعي وسلس جداً
     if p_trans <= 0.3:
-        transition_instruction = "Do NOT use explicit transition words. Let the logic flow naturally through punctuation and clean sentence progression."
+        transition_instruction = "Do not use formal transition words. Let sentences connect through pure logic and natural narrative progression."
     elif p_trans <= 0.6:
-        transition_instruction = "Use simple, organic conversational transitions (e.g., So, Thus, As a result, Meanwhile, Because of this) only where absolutely necessary."
+        transition_instruction = "Use light, organic conversational connectors (like so, yet, but, instead, because of this) only when necessary to bridge thoughts."
     else:
-        transition_instruction = "Connect logical arguments smoothly using varied connectors, but rigidly avoid mechanical repetition."
+        transition_instruction = "Ensure seamless prose flow using a rich variety of structural links, keeping it completely natural and non-repetitive."
 
-    # 3. هندسة تحويل البنية النحوية للمبني للمجهول بشكل غير مكشوف
+    # 3. دمج المبني للمجهول بذكاء بشري متمكن
     if use_passive:
-        passive_instruction = "Convert appropriate active clauses into crisp, standard academic passive voice structures. Invert sentence subjects to radically shatter the predictable AI syntactic structure."
+        passive_instruction = "Blend elegant passive voice constructions into the paragraphs to shift focus to the actions and objects, effectively breaking up repetitive sentence cadences."
     else:
-        passive_instruction = "Maintain a natural and unforced balance between active and passive verbs."
+        passive_instruction = "Favor active, direct verbs, keeping passive phrasing only where it feels entirely organic to standard English."
 
-    # 4. بناء الـ System Prompt الجديد (صائد ومفتت رادارات الـ AI الكاشفة)
-    system_prompt = f"""You are a human academic writer rewriting a draft to sound completely natural, organic, and direct. 
-Your primary goal is to strip away all computational footprints and bypass AI detectors like Turnitin and GPTZero.
+    # 4. الـ System Prompt الشبح (لا يحتوي على أي إشارة للذكاء الاصطناعي أو الكواشف)
+    system_prompt = f"""You are a master copyeditor and a seasoned storyteller rewriting a rough draft for publication in a premium magazine. Your goal is to make the prose sound exceptionally vivid, natural, and engaging, capturing the authentic rhythm of native human speech.
 
-AI detectors flag text that uses "thesaurus-stuffing" (overly ornamental, fancy words) or rigid, robotic transitions. Real humans write clearly, utilizing active verbs, direct expressions, and immense sentence length variety.
+Apply these tailored editing preferences based on the configuration:
+- Vocabulary Modulation: {vocab_instruction}
+- Structural Flow: {transition_instruction}
+- Voice Configuration: {passive_instruction}
 
-Adhere to these interface parameters selected by the user:
-- Phrasing Variance Shift: {vocab_instruction}
-- Discourse Connection Type: {transition_instruction}
-- Voice Inversion (Passive Mode): {passive_instruction}
-
-STRICT ANTI-AI LINGUISTIC RULES (CRITICAL):
-1. MANDATORY BLACKLIST: Do NOT, under any circumstance, use any of these typical AI signature words: delve, tapestry, testament, pivotal, renowned, paramount, furthermore, moreover, consequently, subsequently, unfolds, chronicling, demise, weds, ascends to the throne, specter, perpetrated, exact vengeance, grapples, eloquent, internal turmoil, philosophical contemplations, plot progresses, retaliatory, fatalities, principal characters, perfidy, fidelity, ramifications, endures, preeminent, staged globally, ultimate, multifaceted, underscore. They are immediate AI triggers.
-2. Use clear, concise human terminology. Instead of "demise" use "death"; instead of "narrative unfolds" use "story is set in" or "takes place"; instead of "exact vengeance" use "get revenge".
-3. Structural Burstiness: Mix short, punchy sentences (4 to 7 words) with medium and longer sentences. Avoid having sentences of uniform length. This variation is the #1 human signature.
-4. NEVER alter, touch, or add spaces to citation placeholders like [[REF_1]], [[REF_2]]. 
-5. Keep names and locations untouched ('Hamlet', 'Shakespeare', 'Denmark', 'Claudius').
-6. Preserve original line breaks and paragraphs exactly.
-7. Output ONLY the raw humanized text. Do NOT wrap it in markdown code blocks, and do NOT include any introductory or conversational notes."""
+CORE RULES FOR NATURAL HUMAN PROSE:
+1. Sentence Length Burstiness (Crucial): Heavily vary your sentence structures. Follow a long, descriptive sentence with a very short, sharp, punchy one (4-7 words). Uniform sentence length is completely prohibited.
+2. Dynamic Openings: Never start consecutive sentences with the same subject or pronoun. Mix your sentence openings (e.g., start with a dependent clause, a prepositional phrase, or a direct action).
+3. Absolute Clarity: Write with crisp, clear, and direct language. Avoid overly ornamental, pretentious, or robotic jargon that sounds like a machine trying too hard.
+4. Rigid Guardrails: NEVER change, alter, or add spaces to proper nouns, character names ('Hamlet', 'Shakespeare', 'Claudius'), geographic locations ('Denmark'), or citation placeholders like [[REF_1]]. 
+5. Maintain original paragraphs and line breaks perfectly.
+6. Output ONLY the raw, polished text. No introductions, no notes, and no markdown formatting wrappers."""
 
     url = "https://openrouter.ai/api/v1/chat/completions"
     headers = {
@@ -92,7 +88,7 @@ STRICT ANTI-AI LINGUISTIC RULES (CRITICAL):
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": text}
         ],
-        "temperature": 0.78,  # رفع حرارة الإبداع قليلاً لزيادة الحيرة اللغوية (Perplexity) ومنع الأنماط المتكررة
+        "temperature": 0.85,  # رفع الحرارة لكسر الأنماط الرياضية المتوقعة وتدمير بصمة الـ AI
         "max_tokens": 4000
     }
 
@@ -119,9 +115,8 @@ async def humanize_endpoint(request: HumanizeRequest):
         use_passive=request.use_passive
     )
     
-    # تنظيف ميكانيكي أخير للفراغات العشوائية حول علامات الترقيم
+    # تنظيف ميكانيكي للفراغات قبل الترقيم لضمان مظهر بشري ممتاز
     result_text = re.sub(r"\s+([.,;:!?])", r"\1", result_text)
-    result_text = re.sub(r"``\s*(.+?)\s*''", r'"\1"', result_text)
     
     new_words = count_words(result_text)
     new_sentences = count_sentences(result_text)
@@ -138,4 +133,4 @@ async def humanize_endpoint(request: HumanizeRequest):
 
 @app.get("/health")
 def health_check():
-    return {"status": "healthy", "engine": "Anti-AI Humanizer Engine v7.9"}
+    return {"status": "healthy", "engine": "Stealth Editing Engine v8.0"}
