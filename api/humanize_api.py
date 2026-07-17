@@ -23,9 +23,9 @@ try:
 except Exception as e:
     print(f"Error downloading NLTK data: {e}")
 
-app = FastAPI(title="Advanced Academic AI Text Humanizer API", version="2.8")
+app = FastAPI(title="Advanced Academic AI Text Humanizer API", version="3.0")
 
-# --- إعدادات الـ CORS المستقرة والمفتوحة ---
+# --- إعدادات الـ CORS المفتوحة والمستقرة لجميع المنصات ---
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -70,61 +70,113 @@ def get_semantic_synonym(word, pos_tag):
     return random.choice(synonyms) if synonyms else word
 
 
-# --- 🧠 خوارزمية التحويل الهيكلي والأنسنة النحوية الفائقة المحدثة ---
+# --- 🧠 خوارزمية التحويل الهيكلي والأنسنة النحوية الفائقة v3.0 (سحق كواشف الـ AI) ---
 def advanced_structural_reshaper(sent_text):
-    doc = nlp(sent_text)
     text = sent_text.strip()
+    if not text:
+        return ""
+        
+    # 1. 🛡️ حفظ وعزل علامة الترقيم في نهاية الجملة تماماً لمنع الأخطاء اللغوية
+    ending_punc = "."
+    if text[-1] in [".", "!", "?", ";"]:
+        ending_punc = text[-1]
+        text = text[:-1].strip()
+        
+    # 2. 🛡️ حفظ وعزل العبارات الاستهلالية وتطبيعها لغوياً لكسر بصمة الـ AI
+    intro_phrase = ""
+    intro_match = re.match(r'^(In addition|Furthermore|Moreover|Therefore|Consequently|However|On the other hand|Thus|Notably|As a result|To begin with|In this context),\s+', text, re.IGNORECASE)
+    if intro_match:
+        intro_phrase = intro_match.group(0)
+        text = text[len(intro_phrase):].strip()
+        
+    # ترقية وتغيير العبارة الاستهلالية الفاضحة ببديل أكاديمي نادر ومقاوم للكواشف
+    if intro_phrase:
+        intro_lower = intro_phrase.lower().strip(", ")
+        intro_map = {
+            "therefore": "Thus, ",
+            "furthermore": "Moreover, ",
+            "moreover": "In addition, ",
+            "in addition": "Additionally, ",
+            "consequently": "As a consequence, ",
+            "however": "Nonetheless, ",
+            "thus": "Hence, "
+        }
+        if intro_lower in intro_map:
+            intro_phrase = intro_map[intro_lower]
+
+    structured = False
     
-    # 1. 🔄 نقل الظروف (Adverb Shifting) - آمن للغاية وممتاز لكسر الـ N-grams
-    # مثال: "The system analyzed the data thoroughly." -> "Thoroughly, the system analyzed the data."
-    adverbs = [tok for tok in doc if tok.pos_ == "ADV" and tok.text.lower().endswith("ly")]
-    if adverbs:
-        adv = adverbs[0]
-        if adv.text.lower() not in ["only", "really", "very", "simply", "just"]:
-            adv_text = adv.text
-            # إزالة الظرف القديم وإعادة بناء الجملة بذكاء
-            cleaned_text = re.sub(rf'\b{adv_text}\b', '', text).strip()
-            cleaned_text = re.sub(r'\s+', ' ', cleaned_text)
-            cleaned_text = re.sub(r'\s+([.,!?;:])', r'\1', cleaned_text)
-            
-            # ضبط حالة الأحرف الاستهلالية للجملة الجديدة
-            if cleaned_text[0].isupper() and not cleaned_text.split()[0].lower() in ['i']:
-                cleaned_text = cleaned_text[0].lower() + cleaned_text[1:]
-            return f"{adv_text.capitalize()}, {cleaned_text}"
+    # 3. 🔄 خوارزمية قلب الأدوار وصياغة المبني للمجهول (Active to Passive)
+    # النمط A: "X is the key to Y" -> "Y is fundamentally driven by X"
+    if not structured and re.search(r'^(.+?)\s+is\s+the\s+key\s+to\s+(.+)$', text, re.IGNORECASE):
+        text = re.sub(r'^(.+?)\s+is\s+the\s+key\s+to\s+(.+)$', r'\2 is fundamentally driven by \1', text, flags=re.IGNORECASE)
+        structured = True
+        
+    # النمط B: "X gives/provides people Y" -> "People are provided Y by X"
+    if not structured and re.search(r'^(.+?)\s+(gives|provides)\s+people\s+(.+)$', text, re.IGNORECASE):
+        text = re.sub(r'^(.+?)\s+(gives|provides)\s+people\s+(.+)$', r'People are provided \3 by \1', text, flags=re.IGNORECASE)
+        structured = True
+        
+    # النمط C: "X helps them Y" -> "They are helped by X to Y"
+    if not structured and re.search(r'^(.+?)\s+(also\s+)?helps\s+them\s+(.+)$', text, re.IGNORECASE):
+        also_part = re.search(r'^(.+?)\s+(also\s+)?helps\s+them\s+(.+)$', text, re.IGNORECASE).group(2) or ""
+        text = re.sub(r'^(.+?)\s+(also\s+)?helps\s+them\s+(.+)$', rf'They are {also_part}helped by \1 to \3', text, flags=re.IGNORECASE)
+        structured = True
+        
+    # النمط D: "X opens the door to Y" -> "The door to Y is opened by X"
+    if not structured and re.search(r'^(.+?)\s+opens\s+the\s+door\s+to\s+(.+)$', text, re.IGNORECASE):
+        text = re.sub(r'^(.+?)\s+opens\s+the\s+door\s+to\s+(.+)$', r'The door to \2 is opened by \1', text, flags=re.IGNORECASE)
+        structured = True
 
-    # 2. 🔄 قلب الجمل الشرطية والسببية (Clause Inversion)
-    clause_match = re.search(r'(\s+)(because|although|since|while|if|when|though)\s+([^.,!?;]+)', text, re.IGNORECASE)
-    if clause_match:
-        conj = clause_match.group(2)
-        clause_content = clause_match.group(3)
-        parts = text.split(clause_match.group(0))
-        if len(parts) == 2 and parts[0].strip():
-            main_clause = parts[0].strip()
-            sub_clause = conj + " " + clause_content.strip() + parts[1].strip()
-            
-            sub_clause = sub_clause[0].upper() + sub_clause[1:]
-            if main_clause[0].isupper() and not main_clause.split()[0].lower() in ['i', 'the', 'this', 'it', 'a', 'an']:
-                main_clause = main_clause[0].lower() + main_clause[1:]
+    # النمط E: قلب جمل الشرط والسببية (Inversion)
+    if not structured:
+        clause_match = re.search(r'(\s+)(because|although|since|while|if|when|though)\s+([^.,!?;]+)$', text, re.IGNORECASE)
+        if clause_match:
+            conj = clause_match.group(2)
+            clause_content = clause_match.group(3)
+            parts = text.split(clause_match.group(0))
+            if len(parts) == 2 and parts[0].strip():
+                main_clause = parts[0].strip()
+                sub_clause = conj + " " + clause_content.strip()
                 
-            return f"{sub_clause}, {main_clause.rstrip('.')}"
+                if main_clause[0].isupper() and not main_clause.split()[0].lower() in ['i']:
+                    main_clause = main_clause[0].lower() + main_clause[1:]
+                    
+                text = f"{sub_clause}, {main_clause}"
+                structured = True
 
-    # 3. 🔄 المبني للمجهول الأكاديمي الشائع جداً
-    academic_patterns = {
-        r'^This study demonstrates that\s+(.+)' : r'It is demonstrated by this study that \1',
-        r'^The researchers found that\s+(.+)' : r'It was found by the researchers that \1',
-        r'^The paper analyzes how\s+(.+)' : r'How \1 is analyzed by this paper',
-        r'^This suggests that\s+(.+)' : r'It is suggested by this that \1',
-        r'^The results show that\s+(.+)' : r'It is shown by the results that \1'
+    # 4. 🧩 الأنسنة والتبديل العباري المتقدم (Phrase Mapping) لكسر تتابع كلمات الـ AI الرتيبة
+    phrase_replacements = {
+        r'\bpeople who continue learning\b': 'those continuing to learn',
+        r'\bcan adapt to\b': 'are highly capable of adapting to',
+        r'\bachieve their goals\b': 'attaining their core objectives',
+        r'\bimportant investments\b': 'vital endeavors',
+        r'\banyone can make\b': 'one can undertake',
+        r'\bfor a brighter future\b': 'toward a more promising outlook',
+        r'\blearn to\b': 'acquire the ability to',
+        r'\bsolve problems\b': 'address complex challenges',
+        r'\bcommunicate effectively\b': 'interact with high efficacy',
+        r'\bknowledge and skills\b': 'foundational expertise and competencies'
     }
-    for pattern, repl in academic_patterns.items():
-        if re.match(pattern, text, re.IGNORECASE):
-            return re.sub(pattern, repl, text, flags=re.IGNORECASE)
+    for pat, repl in phrase_replacements.items():
+        text = re.sub(pat, repl, text, flags=re.IGNORECASE)
 
-    if "plays a crucial role in" in text.lower():
-        return re.sub(r'(.+?)\s+plays a crucial role in\s+(.+)', r'A crucial role is played by \1 in \2', text, flags=re.IGNORECASE)
+    # 5. 🔄 نقل الظروف (Adverb Shifting) - يطبق فقط إذا لم تتغير البنية مسبقاً
+    if not structured:
+        doc = nlp(text)
+        adverbs = [tok for tok in doc if tok.pos_ == "ADV" and tok.text.lower().endswith("ly")]
+        if adverbs:
+            adv = adverbs[0]
+            if adv.text.lower() not in ["only", "really", "very", "simply", "just"]:
+                adv_text = adv.text
+                cleaned_text = re.sub(rf'\b{adv_text}\b', '', text).strip()
+                cleaned_text = re.sub(r'\s+', ' ', cleaned_text)
+                if cleaned_text[0].isupper() and not cleaned_text.split()[0].lower() in ['i']:
+                    cleaned_text = cleaned_text[0].lower() + cleaned_text[1:]
+                text = f"{adv_text.capitalize()}, {cleaned_text}"
+                structured = True
 
-    # 4. 🛡️ شبكة الأمان الميكروسكوبية (Fallback Safety Net)
-    # إذا لم يطبق أي تعديل هيكلي، نستبدل كلمة "فاضحة للـ AI" واحدة فقط لكسر مطابقة النص وحمايته!
+    # 6. 🛡️ شبكة الأمان وحارس الكلمات الفاضحة (Case-Insensitive Fixed)
     ai_watermarks = {
         "moreover": "furthermore",
         "furthermore": "in addition",
@@ -143,19 +195,33 @@ def advanced_structural_reshaper(sent_text):
     words = text.split()
     changed = False
     for idx, w in enumerate(words):
-        clean_w = w.lower().strip(".,!?;:")
+        clean_w = re.sub(r'[^a-zA-Z]', '', w).lower()
         if clean_w in ai_watermarks:
             repl = ai_watermarks[clean_w]
-            if w.istitle():
-                repl = repl.title()
-            words[idx] = w.replace(clean_w, repl)
+            if w[0].isupper():
+                repl = repl.capitalize()
+            # استخدام ريجكس محدد الحدود لتبديل الكلمة والاحتفاظ بأي فاصلة ملتصقة بها
+            words[idx] = re.sub(rf'\b{clean_w}\b', repl, w, flags=re.IGNORECASE)
             changed = True
-            break # نكتفي بكلمة واحدة ليبقى النص الأصلي 99% كما هو!
             
     if changed:
-        return " ".join(words)
+        text = " ".join(words)
 
-    return text
+    # 7. 🎬 إعادة تجميع وترتيب الجملة وتصحيح الأحرف الكبيرة
+    text = text.strip()
+    if text:
+        text = text[0].upper() + text[1:]
+        
+    final_sentence = f"{intro_phrase}{text}{ending_punc}"
+    
+    # تنظيف وتلميع علامات الترقيم لمنع مشكلة تكرار "., " أو ",. " نهائياً
+    final_sentence = re.sub(r'\s+', ' ', final_sentence)
+    final_sentence = re.sub(r'\.+', '.', final_sentence)
+    final_sentence = final_sentence.replace(".,", ",")
+    final_sentence = final_sentence.replace(",.", ",")
+    final_sentence = final_sentence.replace(", ,", ",")
+    
+    return final_sentence
 
 
 def advanced_humanizer(text, p_syn, p_trans):
@@ -241,4 +307,4 @@ async def humanize_endpoint(request: HumanizeRequest):
 
 @app.get("/health")
 def health_check():
-    return {"status": "healthy", "engine": "spaCy Structural Reshaper v2.8"}
+    return {"status": "healthy", "engine": "spaCy Structural Reshaper v3.0"}
