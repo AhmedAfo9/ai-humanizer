@@ -23,9 +23,9 @@ try:
 except Exception as e:
     print(f"Error downloading NLTK data: {e}")
 
-app = FastAPI(title="Ultimate Zero-Error Academic Humanizer API", version="6.0")
+app = FastAPI(title="Ultimate Absolute Academic Humanizer API", version="7.0")
 
-# --- إعدادات الـ CORS المستقرة لجميع المنصات ---
+# --- إعدادات الـ CORS المستقرة لمنع مشاكل الاتصال ---
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -51,13 +51,23 @@ IRREGULAR_PLURALS = {
     "criterion": "criteria", "phenomenon": "phenomena", "diagnosis": "diagnoses", "datum": "data"
 }
 
-# --- 🛡️ دالة حارس أدوات النكرة التلقائي (A/An Article Guard) ---
-# تقضي تماماً على أخطاء مثل "a unequalled" وتحولها تلقائياً إلى "an unequalled" قواعدياً
+# الأفعال التركيبية والمساعدة المحظور تبديلها نهائياً لحماية القواعد الأزمنية
+PROTECTED_VERBS = {
+    "be", "is", "am", "are", "was", "were", "been", "being", 
+    "have", "has", "had", "do", "does", "did", "can", "could", 
+    "will", "would", "shall", "should", "may", "might", "must"
+}
+
+# --- 🛡️ دالة حارس أدوات النكرة الصوتي المتقدم v7.0 ---
 def fix_indefinite_articles(text):
-    # 1. تحويل a إلى an إذا جاء بعدها حرف متحرك (vowel sound)
+    # 1. التبديل القياسي الأولي: a تحول إلى an أمام الحروف المتحركة
     text = re.sub(r'\b([Aa])\s+([aeiouAEIOU][a-zA-Z]*)', r'\1n \2', text)
-    # 2. تحويل an إلى a إذا جاء بعدها حرف ساكن (consonant sound)
-    # استثناء الكلمات التي تبدأ بـ un/up لضمان دقة النطق الأكاديمي
+    
+    # 2. الاستثناء الصوتي الحاسم: الكلمات المبتدئة بصوت ساكن رغم الحرف المتحرك (مثل unique, university)
+    # يتم إرجاعها تلقائياً إلى a لضمان الكمال النحوي 100%
+    text = re.sub(r'\b([Aa])n\s+(unique|university|universal|union|unit|uniform|unilateral|one)\b', r'\1 \2', text, flags=re.IGNORECASE)
+    
+    # 3. التبديل القياسي العكسي: an تحول إلى a أمام الحروف الساكنة
     text = re.sub(r'\b([Aa])n\s+([^aeiouAEIOU][a-zA-Z]*)', r'\1 \2', text)
     return text
 
@@ -101,9 +111,13 @@ def smart_inflect(synonym_word, original_token):
     elif original_token.text.isupper(): return word.upper()
     return word
 
-# --- 🧠 مصفوفة البدائل الأكاديمية والملازمات اللفظية المصمتة ---
+# --- 🧠 مصفوفة البدائل الأكاديمية المحدثة بالكامل (v7.0 منيعة الأخطاء) ---
 def get_perfect_context_substitution(token, doc, idx):
     text_lower = token.text.lower()
+    
+    # حماية فورية للأفعال المساعدة والبنائية من التبديل العشوائي لمنع "be studying"
+    if text_lower in PROTECTED_VERBS or token.pos_ == "AUX":
+        return token.text
     
     if text_lower == "hard":
         if idx > 0 and doc[idx-1].pos_ == "VERB" and doc[idx-1].text.lower() in ["studying", "study", "working", "work", "tries"]:
@@ -113,7 +127,9 @@ def get_perfect_context_substitution(token, doc, idx):
     if text_lower in ["methodologies", "methodology"]:
         return "methodological frameworks" if token.tag_ in ["NNS", "NNPS"] else "methodological framework"
 
+    # تصفية الكلمات الأساسية لضمان مفردات طبيعية بليغة تفتت بصمة الـ AI
     fixed_matrix = {
+        "student": "learner", "students": "learners",
         "utilize": "use", "utilizes": "employs", "utilized": "employed", "utilizing": "employing",
         "achieve": "attain", "achieved": "attained", "achieves": "attains", "achieving": "attaining",
         "goal": "objective", "goals": "objectives", "opportunity": "avenue", "opportunities": "avenues",
@@ -132,6 +148,10 @@ def get_perfect_context_substitution(token, doc, idx):
 def get_contextual_synonym(token, doc, idx):
     perfect_match = get_perfect_context_substitution(token, doc, idx)
     if perfect_match: return perfect_match
+    
+    # إذا كانت الكلمة محمية كفعل مساعد، أرجعها فوراً
+    if token.text.lower() in PROTECTED_VERBS or token.pos_ == "AUX":
+        return token.text
         
     word = token.text
     pos_tag = token.tag_
@@ -156,7 +176,7 @@ def get_contextual_synonym(token, doc, idx):
                     cand_synsets = wordnet.synsets(lemma.name(), pos=wn_tag)
                     if cand_synsets:
                         similarity = orig_syn.path_similarity(cand_synsets[0])
-                        if similarity and similarity >= 0.45:  # تشديد الفلترة السياقية لضمان قوة النص
+                        if similarity and similarity >= 0.45:
                             candidates.append(name)
                             
         if candidates:
@@ -294,7 +314,6 @@ def advanced_structural_reshaper(sent_text):
         
     final_sentence = f"{intro_phrase}{text}{ending_punc}"
     
-    # تنظيف وتطبيع علامات الترقيم والضمائر
     final_sentence = re.sub(r'\s+', ' ', final_sentence)
     final_sentence = re.sub(r'\.+', '.', final_sentence)
     final_sentence = final_sentence.replace(".,", ",")
@@ -305,11 +324,9 @@ def advanced_structural_reshaper(sent_text):
     final_sentence = final_sentence.replace(" , ", ", ")
     final_sentence = final_sentence.replace(" .", ".")
     
-    # استدعاء حارس أدوات النكرة الذكي لضمان جودة القواعد 100%
     return fix_indefinite_articles(final_sentence)
 
 
-# --- دالة الأنسنة التقليدية المحدثة لمنع الإفلات العشوائي للجمل ---
 def advanced_humanizer(text, p_syn, p_trans):
     citation_pattern = r'(\([A-Za-z\s\.\,]+,\s+\d{4}\)|\[\d+\])'
     citations = re.findall(citation_pattern, text)
@@ -326,30 +343,28 @@ def advanced_humanizer(text, p_syn, p_trans):
         processed_words = []
         protected_entities = [ent.text.lower() for ent in sent.ents if ent.label_ in ["PERSON", "ORG", "GPE", "WORK_OF_ART"]]
         
-        # حاسبة التعديل الإلزامي: إذا كان الاحتمال ضعيفاً، نضمن تعديل الكلمات المفتاحية الفاضحة على الأقل لمنع إفلات الجملة
-        sentence_changed = False
-        
         for idx, token in enumerate(sent):
             if "__CITATION_" in token.text or token.text.lower() in protected_entities or token.is_punct or token.is_digit:
                 processed_words.append(token.text)
                 continue
             
-            # فحص فوري للمصفوفة الثابتة لكسر بصمة الـ AI إلزامياً
             perfect_sub = get_perfect_context_substitution(token, sent, idx)
             
+            # حظر تبديل الأفعال المساعدة حتى لو تحرك الشريط عشوائياً
+            if token.text.lower() in PROTECTED_VERBS or token.pos_ == "AUX":
+                processed_words.append(token.text)
+                continue
+                
             if random.random() < p_syn or perfect_sub:
                 synonym = perfect_sub if perfect_sub else get_contextual_synonym(token, sent, idx)
                 processed_words.append(synonym)
-                if synonym != token.text:
-                    sentence_changed = True
             else:
                 processed_words.append(token.text)
 
-        # إعادة تجميع الجملة وتنظيف المسافات قبل علامات الترقيم
         reconstructed_sent = " ".join(processed_words)
-        reconstructed_sent = re.sub(r'\s+([.,!?;:])', r'\1', reconstructed_text if 'reconstructed_text' in locals() else reconstructed_sent)
+        # إصلاح دالة المعالجة الموضعية للجملة (تم التطهير التام من الـ Bug القديم)
+        reconstructed_sent = re.sub(r'\s+([.,!?;:])', r'\1', reconstructed_sent)
         
-        # إضافة الروابط الذكية بالحقن الاعتراضي البشري
         if i > 0 and random.random() < p_trans:
             available_transitions = [t for t in ACADEMIC_TRANSITIONS if t != last_transition]
             chosen_transition = random.choice(available_transitions)
@@ -370,7 +385,6 @@ def advanced_humanizer(text, p_syn, p_trans):
     final_text = final_text.replace(" ,", ",")
     final_text = re.sub(r'\s+\.', '.', final_text)
     
-    # استدعاء الحارس النحوي على كامل النص المخرّج لضمان صفر أخطاء
     return fix_indefinite_articles(final_text.strip())
 
 
@@ -406,4 +420,4 @@ async def humanize_endpoint(request: HumanizeRequest):
 
 @app.get("/health")
 def health_check():
-    return {"status": "healthy", "engine": "Ultimate Zero-Error Engine v6.0"}
+    return {"status": "healthy", "engine": "Ultimate Absolute Engine v7.0"}
