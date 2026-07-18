@@ -7,9 +7,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional
 
-app = FastAPI(title="C1 Academic Advanced Editing Engine", version="8.2")
+app = FastAPI(title="Human Baseline Mimicry Engine", version="8.3")
 
-# --- إعدادات الـ CORS المستقرة لمنع مشاكل الاتصال ---
+# إعدادات الـ CORS لضمان استقرار الاتصال مع الواجهة
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -37,49 +37,24 @@ def call_openrouter_engine(text: str, p_syn: float, p_trans: float, use_passive:
     if not api_key:
         return "Error: OPENROUTER_API_KEY is not set."
 
-    # 1. ضبط معايير اختيار الكلمات بناءً على مستوى C1 الطبيعي والنظيف
-    if p_syn <= 0.3:
-        vocab_instruction = "Keep the vocabulary simple, clean, and close to the draft, only fixing awkward phrasing."
-    elif p_syn <= 0.6:
-        vocab_instruction = "Use natural, common academic verbs. Replace complex textbook metaphors with direct, accurate vocabulary."
-    else:
-        vocab_instruction = "Fully rewrite using clear, diverse, and robust C1-level expressions, ensuring total clarity without puffery."
+    # هندسة الأوامر (Prompt Engineering) العكسية بناءً على نصوصك البشرية المرجعية
+    system_prompt = f"""You are a non-native English academic researcher writing your Master's thesis in linguistics. 
+Your goal is to rewrite the given text so it completely matches authentic, unpolished, and direct human academic writing. 
 
-    # 2. صياغة روابط منطقية غير متكلفة
-    if p_trans <= 0.3:
-        transition_instruction = "Do not use robotic transition words. Connect ideas purely through punctuation and sentence order."
-    elif p_trans <= 0.6:
-        transition_instruction = "Incorporate simple, natural links (like so, yet, because of this, instead) only where logically required."
-    else:
-        transition_instruction = "Maintain dynamic logical flow using varied, clean structural connectors, completely avoiding mechanical repetition."
+Apply these core human-mimicry rules based on real academic baseline data:
+1. Lexical Simplicity (CRITICAL): Use basic, direct verbs and nouns (e.g., 'studied', 'plays a role', 'draw attention', 'emerged', 'make a contribution'). NEVER use AI-typical academic jargon like 'delve', 'underscores', 'paramount', 'elucidates', 'tapestry', 'pivotal', 'fosters', 'demise', 'unfurls', or 'cascade'.
+2. Grammatical Authenticity & Unpolished Phrasing: Do not over-polish the grammar. Use straightforward, sometimes slightly rigid phrasing that focuses purely on meaning (e.g., 'is firstly emerged', 'have a very important role'). Avoid complex, flowery, or passive-aggressive AI structures.
+3. Structural Repetition: It is completely acceptable and encouraged to repeat transition phrases or structural framing in consecutive sentences (e.g., 'It is hoped that...', 'This study is also hoped to...'). Do not use a thesaurus to artificially vary every single word. Humans repeat structures naturally.
+4. Sentence Flow: Write plain declarative sentences. Avoid starting sentences with complex dependent clauses or participial phrases (e.g., 'Reeling from his father's death...'). Just state the subject and verb directly.
+5. Absolute Guardrails: Do not modify names, years, locations, or citations (e.g., '(Abraham, 2016)').
 
-    # 3. إدراج الصيغ الهيكلية للمبني للمجهول بذكاء الطالب المتمكن
-    if use_passive:
-        passive_instruction = "Integrate precise passive voice constructions into appropriate clauses. This structural shift is necessary to break up predictable active-voice patterns."
-    else:
-        passive_instruction = "Use standard active and passive structures in a balanced, unforced human proportion."
-
-    # 4. الـ System Prompt الجديد كلياً: شخصية الباحث المتقدم C1 (صائد ومفتت البصمات الآلية)
-    system_prompt = f"""You are a brilliant non-native academic researcher writing at an advanced C1 English proficiency level. Your prose is structurally flawless, grammatically perfect, and highly coherent, but it is entirely free from pretentious, ornamental, or dramatic AI-jargon. You write with clinical clarity, using straightforward and objective language.
-
-Apply these mechanical preferences based on the configuration:
-- Vocabulary Scale: {vocab_instruction}
-- Logical Linkage: {transition_instruction}
-- Grammatical Voice: {passive_instruction}
-
-STRICT DIRECTIVES TO DESTROY THE AI FOOTPRINT:
-1. THE PRECISE BLACKLIST: Do NOT use overly dramatic, narrative, or cliché words that machines rely on to sound smart. Absolutely forbid: unfurls, plunges us into, heart of, web of sorrow, chilling truth, cascade, demise, weds, ascends to the throne, specter, perpetrated, inner turmoil, deeply saddened, profound sorrow, plot progresses, revolutionary, tapestry, testament, delve, pivotal, renowned, paramount, furthermore, moreover, consequently, subsequently, underscores.
-2. The C1 Clarity Rule: Write plainly and directly. Instead of "unfurls in Denmark," write "takes place in Denmark." Instead of "caught in a web of sorrow," write "is deeply grieved by." Avoid flowery adjectives; real scholars focus on clear facts and data.
-3. Radical Sentence Length Burstiness: Ensure a highly unpredictable rhythm. Mix very long complex sentences (25-30 words) with very short, punchy, declarative sentences (4-6 words). Uniform or predictable sentence length is the primary trigger for AI detection detectors.
-4. Rigid Guardrails: NEVER touch, alter, or introduce spaces to proper nouns, character names ('Hamlet', 'Shakespeare'), geographic locations, or citation numbers/tags.
-5. Retain original line breaks and paragraphs perfectly.
-6. Output ONLY the clean rewritten text, with no markdown code blocks, no introductions, and no conversational notes."""
+Your output must be the raw rewritten text only, preserving original line breaks and citation formats exactly. Do not include any meta-commentary, introductory text, or markdown code blocks."""
 
     url = "https://openrouter.ai/api/v1/chat/completions"
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
-        "X-Title": "Academic Humanizer Suite"
+        "X-Title": "Academic Baseline Mimicry Suite"
     }
     
     payload = {
@@ -88,7 +63,7 @@ STRICT DIRECTIVES TO DESTROY THE AI FOOTPRINT:
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": text}
         ],
-        "temperature": 0.85,  # مستوى مثالي لرفع الحيرة الإحصائية (Perplexity) دون خسارة المعنى
+        "temperature": 0.75, # خفضنا الحرارة قليلاً لمنع الموديل من "الإبداع" وإجباره على التبسيط الحرفي
         "max_tokens": 4000
     }
 
@@ -115,7 +90,7 @@ async def humanize_endpoint(request: HumanizeRequest):
         use_passive=request.use_passive
     )
     
-    # تنظيف الفراغات حول علامات الترقيم لضمان مظهر احترافي
+    # تنظيف الفراغات حول علامات الترقيم
     result_text = re.sub(r"\s+([.,;:!?])", r"\1", result_text)
     
     new_words = count_words(result_text)
@@ -133,4 +108,4 @@ async def humanize_endpoint(request: HumanizeRequest):
 
 @app.get("/health")
 def health_check():
-    return {"status": "healthy", "engine": "C1 Advanced Stealth Engine v8.2"}
+    return {"status": "healthy", "engine": "Human Baseline Engine v8.3"}
